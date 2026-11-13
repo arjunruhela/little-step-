@@ -1,0 +1,17 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { MapPin, Search, Star, Clock3, Baby } from 'lucide-react';
+import Navbar from '../components/layout/Navbar';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import api from '../services/api';
+
+export default function SearchPage() {
+  const [params, setParams] = useSearchParams();
+  const [centers, setCenters] = useState([]); const [loading, setLoading] = useState(true);
+  const city = params.get('city') || ''; const [query, setQuery] = useState(city); const [only24, setOnly24] = useState(params.get('is24x7') === 'true');
+  const load = async () => { setLoading(true); try { const qs = new URLSearchParams({ limit: '50', verificationStatus: 'verified' }); if (query) qs.set('city', query); if (only24) qs.set('is24x7','true'); const {data}=await api.get(`/centers?${qs}`); setCenters(data?.data?.data || data?.data || []); } catch { setCenters([]); } finally { setLoading(false); } };
+  useEffect(() => { load(); }, [params]);
+  const submit = e => { e.preventDefault(); setParams({ ...(query ? {city:query}:{ }), ...(only24 ? {is24x7:'true'}:{}) }); };
+  return <div className="min-h-screen bg-slate-50"><Navbar/><main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10"><div className="mb-8"><h1 className="text-3xl font-bold">Find childcare</h1><p className="text-slate-600 mt-1">Compare verified centers and flexible care options.</p></div><Card className="mb-7"><form onSubmit={submit} className="grid md:grid-cols-[1fr_auto_auto] gap-3 items-center"><div className="relative"><Search className="absolute left-3 top-3 w-5 h-5 text-slate-400"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="City" className="w-full pl-10 py-3 border border-slate-200 rounded-lg"/></div><label className="flex items-center gap-2 px-3 text-sm text-slate-700"><input type="checkbox" checked={only24} onChange={e=>setOnly24(e.target.checked)} /> 24×7 only</label><Button type="submit">Search</Button></form></Card>{loading?<Card><div className="py-16 text-center text-slate-500">Loading centers…</div></Card>:centers.length?<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{centers.map(c=><Card key={c._id} className="overflow-hidden p-0"><div className="h-40 bg-gradient-to-br from-primary-100 to-emerald-100 flex items-center justify-center">{c.images?.[0]?<img src={c.images[0]} className="w-full h-full object-cover"/>:<Baby className="w-14 h-14 text-primary-400"/>}</div><div className="p-5"><div className="flex justify-between"><h2 className="font-bold text-lg">{c.name}</h2><span className="flex gap-1 text-sm"><Star className="w-4 h-4 text-amber-400 fill-amber-400"/>{c.rating||'New'}</span></div><p className="text-sm text-slate-500 flex gap-1 mt-1"><MapPin className="w-4 h-4"/>{c.city}</p><div className="flex flex-wrap gap-2 mt-3">{c.is24x7&&<span className="badge">24×7</span>}{c.ageGroups?.slice(0,2).map(a=><span key={a} className="badge">{a} yrs</span>)}</div><Link to={`/centers/${c._id}`} className="block mt-4"><Button variant="outline" className="w-full">View details</Button></Link></div></Card>)}</div>:<Card><div className="py-16 text-center"><Clock3 className="mx-auto w-10 h-10 text-slate-300"/><h3 className="font-bold mt-3">No centers found</h3><p className="text-slate-500 mt-1">Try another city or remove the 24×7 filter.</p></div></Card>}</main></div>;
+}

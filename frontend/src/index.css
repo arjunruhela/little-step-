@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900;
+}
+
+.badge { @apply px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium; }

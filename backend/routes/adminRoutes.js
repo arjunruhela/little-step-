@@ -1,0 +1,10 @@
+const router=require('express').Router();const {authenticate,authorize}=require('../middleware/auth');const c=require('../controllers/adminController');
+router.use(authenticate,authorize('admin'));
+router.get('/stats',c.getStats);router.get('/users',c.listUsers);router.patch('/users/:id/status',c.setUserStatus);
+router.get('/providers',c.listProviders);router.patch('/providers/:id/verify',c.verifyProvider);router.patch('/providers/:id/reject',c.rejectProvider);
+router.get('/centers',c.listCenters);router.patch('/centers/:id/verification',c.setCenterVerification);
+router.get('/bookings',c.listBookings);
+router.get('/disputes',c.listDisputes);router.patch('/disputes/:id',c.updateDispute);
+router.get('/documents',c.listDocuments);router.patch('/documents/:id',c.verifyDocument);
+router.get('/categories',c.listCategories);router.post('/categories',c.createCategory);router.put('/categories/:id',c.updateCategory);
+module.exports=router;

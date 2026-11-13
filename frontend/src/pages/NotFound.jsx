@@ -1,0 +1,2 @@
+import React from 'react'; import { Link } from 'react-router-dom'; import Button from '../components/ui/Button';
+export default function NotFound(){return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-center px-4"><div><p className="text-6xl font-black text-primary-600">404</p><h1 className="text-2xl font-bold mt-3">Page not found</h1><p className="text-slate-500 mt-2">That Little Steps page does not exist.</p><Link to="/" className="inline-block mt-6"><Button>Go home</Button></Link></div></div>}

@@ -1,0 +1,25 @@
+const router=require('express').Router();
+const {authenticate,authorize}=require('../middleware/auth');
+const upload=require('../middleware/upload');
+const c=require('../controllers/providerController');
+router.use(authenticate,authorize('provider'));
+router.get('/profile',c.getProvider);
+router.get('/center',c.getProviderCenter); // compatibility; center-specific data is also returned by dashboard consumers
+router.post('/center',c.upsertCenter);
+router.put('/center',c.upsertCenter);
+router.post('/center/image',upload.single('centerImage'),c.uploadCenterImage);
+router.get('/caregivers',c.listCaregivers);
+router.post('/caregivers',upload.single('caregiverImage'),c.createCaregiver);
+router.put('/caregivers/:id',c.updateCaregiver);
+router.delete('/caregivers/:id',c.deleteCaregiver);
+router.get('/plans',c.listPlans);
+router.post('/plans',c.createPlan);
+router.put('/plans/:id',c.updatePlan);
+router.delete('/plans/:id',c.deletePlan);
+router.get('/availability',c.listAvailability);
+router.post('/availability',c.createAvailability);
+router.put('/availability/:id',c.updateAvailability);
+router.get('/bookings',require('../controllers/bookingController').getProviderBookings);
+router.get('/analytics',c.getAnalytics);
+router.post('/documents',upload.single('document'),c.submitDocument);
+module.exports=router;

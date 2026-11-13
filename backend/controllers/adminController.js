@@ -1,0 +1,33 @@
+const User=require('../models/User');
+const Provider=require('../models/Provider');
+const ChildcareCenter=require('../models/ChildcareCenter');
+const Booking=require('../models/Booking');
+const Dispute=require('../models/Dispute');
+const Document=require('../models/Document');
+const Category=require('../models/Category');
+const Subscription=require('../models/Subscription');
+const Notification=require('../models/Notification');
+
+const getStats=async(req,res,next)=>{try{
+ const [totalUsers,totalParents,totalProviders,verifiedProviders,totalCenters,totalBookings,pendingBookings,activeSubscriptions,ratings]=await Promise.all([
+  User.countDocuments(),User.countDocuments({role:'parent'}),User.countDocuments({role:'provider'}),Provider.countDocuments({verificationStatus:'verified'}),ChildcareCenter.countDocuments(),Booking.countDocuments(),Booking.countDocuments({status:'pending'}),Subscription.countDocuments({status:'active'}),ChildcareCenter.aggregate([{$group:{_id:null,avg:{$avg:'$rating'}}}])
+ ]);
+ res.json({success:true,data:{totalUsers,totalParents,totalProviders,verifiedProviders,totalCenters,totalBookings,pendingBookings,activeSubscriptions,averageRating:Number((ratings[0]?.avg||0).toFixed(2))}});
+}catch(e){next(e);}};
+
+const listUsers=async(req,res,next)=>{try{const q={};if(req.query.role)q.role=req.query.role;if(req.query.status)q.status=req.query.status;if(req.query.search)q.$or=[{name:new RegExp(req.query.search,'i')},{email:new RegExp(req.query.search,'i')}];res.json({success:true,data:await User.find(q).select('-password').sort({createdAt:-1})});}catch(e){next(e);}};
+const listProviders=async(req,res,next)=>{try{const q={};if(req.query.status)q.verificationStatus=req.query.status;const providers=await Provider.find(q).populate('userId','name email phone').sort({createdAt:-1});res.json({success:true,data:providers});}catch(e){next(e);}};
+const verifyProvider=async(req,res,next)=>{try{const p=await Provider.findByIdAndUpdate(req.params.id,{verificationStatus:'verified',verifiedAt:new Date(),rejectionReason:null},{new:true});if(!p)return res.status(404).json({success:false,message:'Provider not found'});res.json({success:true,data:p,message:'Provider verified successfully'});}catch(e){next(e);}};
+const rejectProvider=async(req,res,next)=>{try{const p=await Provider.findByIdAndUpdate(req.params.id,{verificationStatus:'rejected',rejectionReason:req.body.reason||'Verification rejected'},{new:true});if(!p)return res.status(404).json({success:false,message:'Provider not found'});res.json({success:true,data:p,message:'Provider rejected'});}catch(e){next(e);}};
+const listCenters=async(req,res,next)=>{try{const q={};if(req.query.status)q.verificationStatus=req.query.status;const centers=await ChildcareCenter.find(q).populate('providerId','businessName verificationStatus').sort({createdAt:-1});res.json({success:true,data:centers});}catch(e){next(e);}};
+const setCenterVerification=async(req,res,next)=>{try{const status=req.body.status;if(!['verified','rejected','pending'].includes(status))return res.status(400).json({success:false,message:'Invalid status'});const c=await ChildcareCenter.findByIdAndUpdate(req.params.id,{verificationStatus:status},{new:true});if(!c)return res.status(404).json({success:false,message:'Center not found'});res.json({success:true,data:c});}catch(e){next(e);}};
+const listBookings=async(req,res,next)=>{try{const q={};if(req.query.status)q.status=req.query.status;const b=await Booking.find(q).populate('parentId','name email').populate('centerId','name').populate('childId','name').sort({createdAt:-1});res.json({success:true,data:b});}catch(e){next(e);}};
+const listDisputes=async(req,res,next)=>{try{const q={};if(req.query.status)q.status=req.query.status;res.json({success:true,data:await Dispute.find(q).populate('bookingId').populate('createdBy','name email').populate('resolvedBy','name').sort({createdAt:-1})});}catch(e){next(e);}};
+const updateDispute=async(req,res,next)=>{try{const {status,resolutionNotes}=req.body;if(!['open','under_review','resolved','rejected'].includes(status))return res.status(400).json({success:false,message:'Invalid dispute status'});const d=await Dispute.findByIdAndUpdate(req.params.id,{status,resolutionNotes,resolvedBy:['resolved','rejected'].includes(status)?req.user._id:undefined},{new:true}).populate('bookingId');if(!d)return res.status(404).json({success:false,message:'Dispute not found'});const booking=d.bookingId;await Notification.create({userId:d.createdBy,title:'Dispute Updated',message:`Your dispute is now ${status}.`,type:'dispute',relatedId:d._id});res.json({success:true,data:d});}catch(e){next(e);}};
+const listDocuments=async(req,res,next)=>{try{const q={};if(req.query.status)q.status=req.query.status;res.json({success:true,data:await Document.find(q).populate('providerId','businessName').sort({createdAt:-1})});}catch(e){next(e);}};
+const verifyDocument=async(req,res,next)=>{try{const {status,rejectionReason}=req.body;if(!['verified','rejected','pending'].includes(status))return res.status(400).json({success:false,message:'Invalid status'});const d=await Document.findByIdAndUpdate(req.params.id,{status,rejectionReason,verifiedAt:status==='verified'?new Date():undefined,verifiedBy:status==='verified'?req.user._id:undefined},{new:true});if(!d)return res.status(404).json({success:false,message:'Document not found'});res.json({success:true,data:d});}catch(e){next(e);}};
+const listCategories=async(req,res,next)=>{try{res.json({success:true,data:await Category.find().sort({type:1,name:1})});}catch(e){next(e);}};
+const createCategory=async(req,res,next)=>{try{const c=await Category.create(req.body);res.status(201).json({success:true,data:c});}catch(e){next(e);}};
+const updateCategory=async(req,res,next)=>{try{const c=await Category.findByIdAndUpdate(req.params.id,req.body,{new:true,runValidators:true});if(!c)return res.status(404).json({success:false,message:'Category not found'});res.json({success:true,data:c});}catch(e){next(e);}};
+const setUserStatus=async(req,res,next)=>{try{if(!['active','inactive','suspended'].includes(req.body.status))return res.status(400).json({success:false,message:'Invalid status'});const u=await User.findByIdAndUpdate(req.params.id,{status:req.body.status},{new:true}).select('-password');if(!u)return res.status(404).json({success:false,message:'User not found'});res.json({success:true,data:u});}catch(e){next(e);}};
+module.exports={getStats,listUsers,listProviders,verifyProvider,rejectProvider,listCenters,setCenterVerification,listBookings,listDisputes,updateDispute,listDocuments,verifyDocument,listCategories,createCategory,updateCategory,setUserStatus};

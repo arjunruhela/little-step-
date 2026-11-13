@@ -1,0 +1,12 @@
+const router=require('express').Router();
+const {authenticate,authorize}=require('../middleware/auth');
+const c=require('../controllers/parentController');
+const bookings=require('../controllers/bookingController');
+router.use(authenticate,authorize('parent'));
+router.get('/children',c.getChildren); router.post('/children',c.addChild); router.put('/children/:id',c.updateChild); router.delete('/children/:id',c.deleteChild);
+router.get('/bookings',bookings.getMyBookings);
+router.get('/subscriptions',c.getSubscriptions); router.post('/subscriptions',c.createSubscription); router.patch('/subscriptions/:id/cancel',c.cancelSubscription); router.patch('/subscriptions/:id/renew',c.renewSubscription);
+router.get('/notifications',c.getNotifications); router.patch('/notifications/:id/read',c.markNotificationRead);
+router.post('/reviews',c.createReview);
+router.post('/disputes',c.createDispute);
+module.exports=router;
